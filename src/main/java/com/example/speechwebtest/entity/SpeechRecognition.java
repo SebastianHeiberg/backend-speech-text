@@ -4,14 +4,7 @@ package com.example.speechwebtest.entity;
 import com.microsoft.cognitiveservices.speech.*;
 import com.microsoft.cognitiveservices.speech.audio.*;
 import org.springframework.stereotype.Component;
-
-import javax.sound.sampled.AudioFileFormat;
-import javax.sound.sampled.AudioFormat;
-import javax.sound.sampled.AudioSystem;
-import java.io.ByteArrayInputStream;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.nio.file.Files;
+import java.io.FileNotFoundException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 
@@ -21,25 +14,29 @@ public class SpeechRecognition {
   private static String speechKey = System.getenv("SPEECH_KEY");
   private static String speechRegion = System.getenv("SPEECH_REGION");
 
-  public static void recognizeFromMicrophone(String path) throws InterruptedException, ExecutionException {
+  public static void recognizeFromMicrophone(String path) throws InterruptedException, ExecutionException, FileNotFoundException {
 
 
     SpeechConfig speechConfig = SpeechConfig.fromSubscription(speechKey, speechRegion);
     speechConfig.setSpeechRecognitionLanguage("en-US");
-    AudioConfig audioConfig = AudioConfig.fromWavFileInput(path);
+
+    //importeret fra tutorial til at hente lokalt placeret lydfil
+    String filePath = path;
+    PullAudioInputStream pullAudio = AudioInputStream.createPullStream(new BinaryAudioStreamReader(filePath),
+        AudioStreamFormat.getCompressedFormat(AudioStreamContainerFormat.MP3));
+    AudioConfig audioConfig = AudioConfig.fromStreamInput(pullAudio);
 
     SpeechRecognizer speechRecognizer = new SpeechRecognizer(speechConfig, audioConfig);
+
 
     Future<SpeechRecognitionResult> task = speechRecognizer.recognizeOnceAsync();
     SpeechRecognitionResult speechRecognitionResult = task.get();
 
     if (speechRecognitionResult.getReason() == ResultReason.RecognizedSpeech) {
       System.out.println("RECOGNIZED: Text=" + speechRecognitionResult.getText());
-    }
-    else if (speechRecognitionResult.getReason() == ResultReason.NoMatch) {
+    } else if (speechRecognitionResult.getReason() == ResultReason.NoMatch) {
       System.out.println("NOMATCH: Speech could not be recognized.");
-    }
-    else if (speechRecognitionResult.getReason() == ResultReason.Canceled) {
+    } else if (speechRecognitionResult.getReason() == ResultReason.Canceled) {
       CancellationDetails cancellation = CancellationDetails.fromResult(speechRecognitionResult);
       System.out.println("CANCELED: Reason=" + cancellation.getReason());
 
@@ -51,4 +48,4 @@ public class SpeechRecognition {
     }
 
   }
-  }
+}
